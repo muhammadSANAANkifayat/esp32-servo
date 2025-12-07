@@ -1,65 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Remote Servo Control</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Servo Control</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; text-align: center; }
-    .panel { padding: 20px; border: 2px solid black; border-radius: 10px; display: inline-block; }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    #slider { width: 300px; margin: 20px 0; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    #status { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-<h2>🌍 Remote Servo Controller</h2>
+  <h1>ESP32 Servo Control</h1>
 
-<div class="panel">
-  <label>Servo angle:</label><br>
-  <input id="slider" type="range" min="0" max="180" value="90">
-  <span id="angle">90</span>°
+  <label for="slider">Servo Angle: <span id="angleValue">90</span>°</label><br>
+  <input type="range" id="slider" min="0" max="180" value="90"><br>
 
-  <br><br>
+  <button id="chaosBtn">CHAOS MODE!</button>
 
-  <button id="chaos">Activate CHAOS MODE 🌀</button>
-</div>
+  <div id="status">Status: Idle</div>
 
-<script>
-const token = "TOKEN_HERE";
-const username = "muhammadSANAANkifayat"; // <-- Replace with your GitHub username
-const repo = "servo-remote";  
-const filePath = "command.json";
+  <script>
+    const slider = document.getElementById('slider');
+    const angleValue = document.getElementById('angleValue');
+    const chaosBtn = document.getElementById('chaosBtn');
+    const status = document.getElementById('status');
 
-document.getElementById("slider").oninput = e => {
-  document.getElementById("angle").innerText = e.target.value;
-  updateFile(e.target.value, false);
-};
+    // <-- YOUR LIVE RENDER SERVER URL -->
+    const SERVER_URL = "https://servo-server.onrender.com/update";
 
-document.getElementById("chaos").onclick = () => {
-  updateFile(0, true);
-};
+    let chaosActive = false;
 
-function updateFile(angle, chaos) {
-  fetch(`https://api.github.com/repos/${username}/${repo}/contents/${filePath}`)
-    .then(r => r.json())
-    .then(info => {
-      const newContent = btoa(JSON.stringify({
-        servo_angle: Number(angle),
-        chaos_mode: chaos
-      }, null, 2));
-
-      fetch(`https://api.github.com/repos/${username}/${repo}/contents/${filePath}`, {
-        method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: "Update servo command",
-          content: newContent,
-          sha: info.sha
-        })
+    function sendCommand(angle, chaos) {
+      fetch(SERVER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ servo_angle: angle, chaos_mode: chaos })
+      })
+      .then(res => res.json())
+      .then(data => {
+        status.textContent = "Status: Command sent!";
+      })
+      .catch(err => {
+        status.textContent = "Status: Error sending command";
+        console.error(err);
       });
+    }
+
+    // Slider control
+    slider.addEventListener('input', () => {
+      if (!chaosActive) {
+        const angle = parseInt(slider.value);
+        angleValue.textContent = angle;
+        sendCommand(angle, false);
+      }
     });
-}
-</script>
+
+    // Chaos button
+    chaosBtn.addEventListener('click', () => {
+      chaosActive = true;
+      status.textContent = "Status: CHAOS MODE ACTIVE!";
+      sendCommand(parseInt(slider.value), true);
+
+      // Disable slider during chaos
+      slider.disabled = true;
+
+      // End chaos after 5 seconds
+      setTimeout(() => {
+        chaosActive = false;
+        slider.disabled = false;
+        status.textContent = "Status: Idle";
+        sendCommand(parseInt(slider.value), false);
+      }, 5000);
+    });
+  </script>
 
 </body>
 </html>
