@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Remote Servo Control</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
+    .panel { padding: 20px; border: 2px solid black; border-radius: 10px; display: inline-block; }
+  </style>
+</head>
+<body>
+
+<h2>🌍 Remote Servo Controller</h2>
+
+<div class="panel">
+  <label>Servo angle:</label><br>
+  <input id="slider" type="range" min="0" max="180" value="90">
+  <span id="angle">90</span>°
+
+  <br><br>
+
+  <button id="chaos">Activate CHAOS MODE 🌀</button>
+</div>
+
+<script>
+const token = "TOKEN_HERE";
+const username = "muhammadSANAANkifayat"; // <-- Replace with your GitHub username
+const repo = "servo-remote";  
+const filePath = "command.json";
+
+document.getElementById("slider").oninput = e => {
+  document.getElementById("angle").innerText = e.target.value;
+  updateFile(e.target.value, false);
+};
+
+document.getElementById("chaos").onclick = () => {
+  updateFile(0, true);
+};
+
+function updateFile(angle, chaos) {
+  fetch(`https://api.github.com/repos/${username}/${repo}/contents/${filePath}`)
+    .then(r => r.json())
+    .then(info => {
+      const newContent = btoa(JSON.stringify({
+        servo_angle: Number(angle),
+        chaos_mode: chaos
+      }, null, 2));
+
+      fetch(`https://api.github.com/repos/${username}/${repo}/contents/${filePath}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: "Update servo command",
+          content: newContent,
+          sha: info.sha
+        })
+      });
+    });
+}
+</script>
+
+</body>
+</html>
